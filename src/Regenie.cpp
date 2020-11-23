@@ -68,7 +68,7 @@ void print_header(std::ostream& o){
 #ifndef HAS_BOOST_IOSTREAM
   oss << "  ";
 #endif
-  oss << "REGENIE v" << VERSION_NUMBER; 
+  oss << "REGENIE v" << VERSION_NUMBER;
   vnumber = oss.str();
 
   o << left << std::setw(14) << " " << "|" << std::string(30, '=')<< "|" << endl;

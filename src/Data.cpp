@@ -56,6 +56,28 @@ Data::~Data() {
 }
 
 
+
+
+void toStr(Eigen::MatrixXd& mat){
+    cout << mat << endl;
+}
+
+void toStr(Eigen::VectorXd& vec){
+    cout << vec << endl;
+}
+
+void toStr(Eigen::RowVectorXd& rvec){
+    cout << rvec << endl;
+}
+
+void colToStr(Eigen::MatrixXd& mat, int i){
+    cout << mat.col(i) << endl;
+}
+
+void rowToStr(Eigen::MatrixXd& mat, int i){
+    cout << mat.row(i) << endl;
+}
+
 void Data::run() {
 
   if(params.test_mode) {
@@ -128,9 +150,9 @@ void Data::residualize_genotypes() {
   Gblock.Gmat.array().rowwise() *= in_filters.ind_in_analysis.matrix().transpose().array().cast<double>();
   if(params.strict_mode) Gblock.Gmat.array().rowwise() *= pheno_data.masked_indivs.col(0).matrix().transpose().array().cast<double>();
 
-  // residuals (centered)
-  MatrixXd beta = Gblock.Gmat * pheno_data.new_cov;
-  Gblock.Gmat -= beta * pheno_data.new_cov.transpose();
+//  // residuals (centered) Kiavash: Commented out
+//  MatrixXd beta = Gblock.Gmat * pheno_data.new_cov;
+//  Gblock.Gmat -= beta * pheno_data.new_cov.transpose();
 
   // scaling
   if(params.strict_mode) scale_G = Gblock.Gmat.rowwise().norm() / sqrt(pheno_data.Neff(0) - 1);
@@ -233,7 +255,7 @@ void Data::set_blocks() {
   if( params.binary_mode && ( n_analyzed < 5000) ) {
     if(!params.use_loocv){
       sout << "   -WARNING: Sample size is less than 5,000 so using LOOCV instead of " << params.cv_folds << "-fold CV.\n";
-      params.use_loocv = true;
+      params.use_loocv = false;
     }
   }
 

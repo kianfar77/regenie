@@ -1123,7 +1123,7 @@ void readChunkFromBGENFileToG(const int bs, const int chrom, uint32_t &snp_index
       ds = gblock->Gmat(snp, i);
       if( params->use_SPA && filters->ind_in_analysis(i) && ds > 0 ) gblock->non_zero_indices_G[snp].push_back(i);
 
-      // impute missing
+      // impute missing (Kiavash: Not necessarily missing. Subtracts mean from all)
       mean_impute_g(gblock->Gmat(snp, i), total, filters->ind_in_analysis(i), masked_indivs(i,0), params->strict_mode);
 
     }

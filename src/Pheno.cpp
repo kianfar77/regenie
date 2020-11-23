@@ -233,7 +233,7 @@ void pheno_read(struct param* params, struct in_files* files, struct filter* fil
           }  else pheno_data->phenotypes(i,j) = 0.0;
         }
     } else {
-      for(int j = 0; j < params->n_pheno; j++) {
+      for(int j = 0; j < params->n_pheno; j++) { // Kiavash: Mean center
         mean = (pheno_data->masked_indivs.col(j).array()).select( pheno_data->phenotypes.col(j).array(), 0).sum() / pheno_data->masked_indivs.col(j).cast<double>().sum();
         pheno_data->phenotypes.col(j).array() = (pheno_data->masked_indivs.col(j).array()).select(pheno_data->phenotypes.col(j).array() - mean, 0);
       }
@@ -393,8 +393,8 @@ void prep_run (struct in_files* files, struct param* params, struct phenodt* phe
   // compute offset for BT (only in step 1)
   if(params->binary_mode && !params->test_mode) fit_null_logistic(0, params, pheno_data, m_ests, sout);
 
-  // residualize phenotypes (skipped for BTs when testing)
-  if(!params->test_mode || !params->binary_mode) residualize_phenotypes(params, pheno_data, files->pheno_names, sout);
+  // residualize phenotypes (skipped for BTs when testing) Kiavash: Commented out
+  // if(!params->test_mode || !params->binary_mode) residualize_phenotypes(params, pheno_data, files->pheno_names, sout);
 
 }
 
