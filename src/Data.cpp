@@ -70,6 +70,10 @@ void toStr(Eigen::RowVectorXd& rvec){
     cout << rvec << endl;
 }
 
+void toStr(Eigen::ArrayXd& arr){
+    cout << arr << endl;
+}
+
 void colToStr(Eigen::MatrixXd& mat, int i){
     cout << mat.col(i) << endl;
 }
@@ -77,6 +81,25 @@ void colToStr(Eigen::MatrixXd& mat, int i){
 void rowToStr(Eigen::MatrixXd& mat, int i){
     cout << mat.row(i) << endl;
 }
+
+void l1_test_mat(ridgel1* l1, int i, int j){
+    cout << l1->test_mat[i][j] << endl;
+}
+
+void l1_test_pheno(ridgel1* l1, int i, int j){
+    cout << l1->test_pheno[i][j] << endl;
+}
+
+void l1_test_pheno_raw(ridgel1* l1, int i, int j){
+    cout << l1->test_pheno_raw[i][j] << endl;
+}
+
+void l1_test_offset(ridgel1* l1, int i, int j){
+    cout << l1->test_offset[i][j] << endl;
+}
+
+
+
 
 void Data::run() {
 
@@ -530,7 +553,7 @@ void Data::level_0_calculations() {
 
       get_G(block, bs, chrom, snp_index_counter, snpinfo, &params, &files, &Gblock, &in_filters, pheno_data.masked_indivs, pheno_data.phenotypes_raw, sout);
 
-      // residualize and scale genotypes
+      // residualize and scale genotypes KiavashL Scaling of genotypes happen here while mean centering happens in get_G!
       residualize_genotypes();
 
       // calc working matrices for ridge regressions across folds
@@ -1192,6 +1215,7 @@ void Data::write_predictions(const int ph){
     sout << "writing LOCO predictions..." << flush;
     ofile.openForWrite(out, sout);
 
+    // Kiavash: Puts the total of predictions for all 23 chromosomes first then down in the loop subtracts that chromosome from the total to get loco.
     // output LOCO predictions G_loco * beta_loco for each autosomal chr
     MatrixXd loco_pred (predictions[0].rows(), params.nChrom);
     loco_pred.colwise() = predictions[0].rowwise().sum();

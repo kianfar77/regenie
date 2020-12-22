@@ -391,9 +391,11 @@ void prep_run (struct in_files* files, struct param* params, struct phenodt* phe
   getCovBasis(pheno_data->new_cov, params);
 
   // compute offset for BT (only in step 1)
-  if(params->binary_mode && !params->test_mode) fit_null_logistic(0, params, pheno_data, m_ests, sout);
+  // Kiavash: Commented out to eliminate cov for comparison with glowgr
+  // if(params->binary_mode && !params->test_mode) fit_null_logistic(0, params, pheno_data, m_ests, sout);
 
-  // residualize phenotypes (skipped for BTs when testing) Kiavash: Commented out
+  // residualize phenotypes (skipped for BTs when testing)
+  // Kiavash: Commented out
   // if(!params->test_mode || !params->binary_mode) residualize_phenotypes(params, pheno_data, files->pheno_names, sout);
 
 }

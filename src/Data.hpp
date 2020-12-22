@@ -61,6 +61,19 @@ class Data {
     Eigen::RowVectorXd p_sd_yres;
     Eigen::VectorXd scale_G; // keep track of sd(Y) (1xP) and sd(G) (M*1)
 
+    // print debug
+
+    void toStr(Eigen::MatrixXd&);
+    void toStr(Eigen::VectorXd&);
+    void toStr(Eigen::RowVectorXd&);
+    void toStr(Eigen::ArrayXd&);
+    void rowToStr(Eigen::MatrixXd&, int);
+    void colToStr(Eigen::MatrixXd&, int);
+    void l1_test_mat(ridgel1*, int, int);
+    void l1_test_pheno(ridgel1*, int, int);
+    void l1_test_pheno_raw(ridgel1*, int, int);
+    void l1_test_offset(ridgel1*, int, int);
+
     // function definitions
     void run();
     void file_read_initialization();

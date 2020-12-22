@@ -172,7 +172,7 @@ void ridge_level_0(const int block, struct in_files* files, struct param* params
   auto t2 = std::chrono::high_resolution_clock::now();
 
   int bs = l0->GGt.rows();
-  int block_eff = params->write_l0_pred ? 0 : block;
+  int block_eff = params->write_l0_pred ? 0 : block; // Kiavash: in lowmem case writes each block, in non lowmem case the pred matrix will be the size of the whole matrix
   uint32_t low = 0, high = 0;
   string op_name, out_pheno;
   ofstream ofile;
@@ -216,7 +216,8 @@ void ridge_level_0(const int block, struct in_files* files, struct param* params
         for(int ph = 0; ph < params->n_pheno; ++ph ) {
           params->beta_print_out[ph].row(j) += beta.col(ph).transpose();
         }
-
+      // Kiavash: Here beta is multiplied by the whole Geno block not just on the fold. In example this gives a 2 (number of phenotypes) by 500 matrix. In glowgr, label is fixed and this is calculated for all betas.
+      // In the example we get a 100 (genotypes in the block) by 10 (number of alphas).
       pred = beta.transpose() * Gblock->Gmat;
       //if(i == 0)sout << pred.rows() << " " << pred.cols() << endl;
       //if(i == 0)sout << beta << endl;
@@ -229,7 +230,7 @@ void ridge_level_0(const int block, struct in_files* files, struct param* params
         p_sd = pred.rowwise().norm() / sqrt(filters->ind_in_analysis.cast<float>().sum() -1);
         //if(i == 0)sout << i << " " << p_sd << endl;
         pred.array().colwise() /= p_sd.array();
-      } else {
+      } else { //Kiavash: Here it is cutting to the block of interest
         p_sum.row(j) += (pred.block(0, cum_size_folds, params->n_pheno, params->cv_sizes[i]).array() * masked_in_folds[i].transpose().array().cast<double>()).matrix().rowwise().sum();
         p_sum2.row(j) += (pred.block(0, cum_size_folds, params->n_pheno, params->cv_sizes[i]).array() * masked_in_folds[i].transpose().array().cast<double>()).matrix().rowwise().squaredNorm();
       }
@@ -251,7 +252,7 @@ void ridge_level_0(const int block, struct in_files* files, struct param* params
           kk+=1;
         } else {
           for(int ph = 0; ph < params->n_pheno; ++ph ) {
-            l1->test_mat[ph][i](jj, block_eff * params->n_ridge_l0 + j) = pred(ph, k);
+            l1->test_mat[ph][i](jj, block_eff * params->n_ridge_l0 + j) = pred(ph, k); //Kiavash, one matrix for each phenotype and each sample block
             l1->test_pheno[ph][i](jj, 0) = pheno_data->phenotypes(k, ph);
             if (params->binary_mode && (block == 0) && (j == 0) ) {
               l1->test_pheno_raw[ph][i](jj, 0) = pheno_data->phenotypes_raw(k, ph);
@@ -281,10 +282,21 @@ void ridge_level_0(const int block, struct in_files* files, struct param* params
 
       cum_size_folds = 0;
       for(int i = 0; i < params->cv_folds; ++i ) {
-        l1->test_mat[ph][i].block(0, block_eff * params->n_ridge_l0, params->cv_sizes[i], params->n_ridge_l0).rowwise() -= p_mean;
-        // mask missing
+          // Kiavash: Run  blockdf.filter('header="chr_1_block_0_alpha_4_label_Y1" and sample_block="1"').show(truncate=False) in glowgr in logistic_model.fit to get comparison with l1->test_mat[0][0]
+          // Kiavash: mu and sig in glowgr are sample_block-wise. To get them run np.array(blockdf.filter('header="chr_1_block_0_alpha_4_label_Y1" and sample_block="1"').select('values').collect())[0,0].mean()
+          // Kiavash: But the p_mean here is over all folds. It is equal to blockdf.filter('header="chr_1_block_0_alpha_4_label_Y1"').agg(avg("mu")).show(truncate=False) in glowgr. Same for std.
+          // Therefore although standardization happens inside logistic_model through assemble_block called by map_irls_eqn the results will not be the same as here. Therefore I commented out the two lines
+          // below and used a new assemble_block there to make the results the same for downstream comparisons.
+
+          //l1->test_mat[ph][i].block(0, block_eff * params->n_ridge_l0, params->cv_sizes[i], params->n_ridge_l0).rowwise() -= p_mean; // Kiavash: Mean center and scale the predictions of level 0
+
+          // mask missing
         l1->test_mat[ph][i].block(0, block_eff * params->n_ridge_l0, params->cv_sizes[i], params->n_ridge_l0).array().colwise() *= masked_in_folds[i].col(ph).array().cast<double>();
-        l1->test_mat[ph][i].block(0, block_eff * params->n_ridge_l0, params->cv_sizes[i], params->n_ridge_l0).array().rowwise() *= p_invsd.array();
+
+        // l1->test_mat[ph][i].block(0, block_eff * params->n_ridge_l0, params->cv_sizes[i], params->n_ridge_l0).array().rowwise() *= p_invsd.array();
+
+
+
 
         if(params->write_l0_pred) {
           Xout.block(cum_size_folds, 0, params->cv_sizes[i], params->n_ridge_l0) = l1->test_mat[ph][i].block(0, block_eff * params->n_ridge_l0, params->cv_sizes[i], params->n_ridge_l0);
@@ -759,8 +771,8 @@ void ridge_logistic_level_1(struct in_files* files, struct param* params, struct
                 zvec = (masked_in_folds[k].col(ph).array()).select((etavec - l1->test_offset[ph][k].array()) + (l1->test_pheno_raw[ph][k].array() - pivec) / wvec, 0);
 
                 XtW = l1->test_mat[ph_eff][k].transpose() * wvec.matrix().asDiagonal();
-                XtWX += XtW * l1->test_mat[ph_eff][k];
-                XtWZ += XtW * zvec.matrix();
+                XtWX += XtW * l1->test_mat[ph_eff][k]; //Kiavash: It is summing over all folds except i
+                XtWZ += XtW * zvec.matrix(); //Kiavash: It is summing over all folds except i
               }
             }
             if( l1->pheno_l1_not_converged(ph) ) break;
@@ -800,7 +812,7 @@ void ridge_logistic_level_1(struct in_files* files, struct param* params, struct
                 score += (l1->test_mat[ph_eff][k].transpose() * masked_in_folds[k].col(ph).array().select(l1->test_pheno_raw[ph][k].array() - pivec, 0).matrix()).array();
               }
             }
-            score -= params->tau[j] * betanew;
+            score -= params->tau[j] * betanew; //Kiavash: Score is the gradient. We want it to be zero.
 
 
           }
